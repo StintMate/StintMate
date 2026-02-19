@@ -1,0 +1,1644 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Stint Mate – iRacing Stint Planner</title>
+  <style>
+    :root{
+      --panel:#121827; --panel2:#0f1523; --text:#e6e9f2; --muted:#9aa4b2; --line:#24304a;
+      --ok:#4ade80; --warn:#fbbf24; --bad:#fb7185;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#070a11,#0b0e14);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    header{padding:18px 18px 8px;display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+    header h1{margin:0;font-size:18px;font-weight:700}
+    header .sub{color:var(--muted);font-size:12px}
+    .wrap{padding:12px 18px 22px;display:grid;grid-template-columns:520px 1fr;gap:14px}
+    @media (max-width:1200px){ .wrap{grid-template-columns:1fr} }
+    .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.35);overflow:hidden}
+    .card .hd{padding:12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .card .hd h2{margin:0;font-size:13px;color:#dbe4ff;font-weight:700}
+    .card .bd{padding:12px}
+    .grid{display:grid;gap:10px}
+    .grid.cols2{grid-template-columns:1fr 1fr}
+    .grid.cols3{grid-template-columns:1fr 1fr 1fr}
+    label{display:block;color:var(--muted);font-size:12px;margin:0 0 6px}
+    input,select,button,textarea{
+      width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--line);
+      background:#0b1020;color:var(--text);outline:none
+    }
+    input:focus,select:focus,textarea:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
+    button{cursor:pointer;border:1px solid #2b3a60;background:#12224a}
+    button:hover{filter:brightness(1.08)}
+    .btnRow{display:flex;gap:8px;flex-wrap:wrap}
+    .btnRow button{width:auto;flex:1;min-width:150px}
+    .pillRow{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{background:#1b2440;border:1px solid var(--line);padding:7px 10px;border-radius:999px;color:var(--muted);font-size:12px}
+    .pill b{color:var(--text)}
+    .mono{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+    .small{font-size:12px;color:var(--muted)}
+    .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#0d1630;color:var(--muted);font-size:11px;white-space:nowrap}
+    .tag.ok{color:var(--ok);border-color:rgba(74,222,128,.35)}
+    .tag.warn{color:var(--warn);border-color:rgba(251,191,36,.35)}
+    .tag.bad{color:var(--bad);border-color:rgba(251,113,133,.35)}
+    .divider{height:1px;background:var(--line);margin:12px 0}
+
+    .switchRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .switch{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#0b1020}
+    .switch input{width:auto}
+    .switch b{font-size:12px}
+    .switch .hint{color:var(--muted);font-size:12px}
+
+    .driversBar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border:1px dashed rgba(36,48,74,.85);border-radius:12px;background:#0b1020}
+    .drvChip{
+      user-select:none;cursor:grab;display:inline-flex;gap:8px;align-items:center;
+      padding:7px 10px;border-radius:999px;border:1px solid var(--line);
+      background:linear-gradient(180deg,#101a36,#0b1020);color:var(--text);font-size:12px
+    }
+    .drvChip:active{cursor:grabbing}
+    .drvDot{width:10px;height:10px;border-radius:999px;box-shadow:0 0 0 3px rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18)}
+    .driversHint{margin-left:auto;color:var(--muted);font-size:12px}
+
+    .gantt{width:100%;height:92px;border:1px solid var(--line);border-radius:12px;background:#0b1020;position:relative;overflow:hidden}
+    .seg{position:absolute;top:0;bottom:0;border-right:1px solid rgba(0,0,0,.35);filter:saturate(1.05)}
+    .seg .lbl{position:absolute;left:8px;top:10px;font-size:12px;color:#0b0e14;background:rgba(255,255,255,.78);padding:2px 6px;border-radius:8px;white-space:nowrap;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis}
+    .seg .sub{position:absolute;left:8px;top:36px;font-size:11px;color:#0b0e14;background:rgba(255,255,255,.58);padding:2px 6px;border-radius:8px;white-space:nowrap}
+    .seg .time{position:absolute;left:8px;bottom:10px;font-size:11px;color:#0b0e14;background:rgba(255,255,255,.55);padding:2px 6px;border-radius:8px;white-space:nowrap}
+    .seg.pit{background:repeating-linear-gradient(45deg, rgba(251,191,36,.85), rgba(251,191,36,.85) 10px, rgba(251,191,36,.55) 10px, rgba(251,191,36,.55) 20px)}
+    .seg.done{filter:saturate(.15);opacity:.78}
+    .seg.dropHover{outline:3px solid rgba(96,165,250,.55);outline-offset:-3px}
+
+    .charts{display:grid;grid-template-columns:1fr;gap:14px}
+    @media (min-width:1200px){ .charts{grid-template-columns:1fr 1fr} }
+    .chartBox{height:280px}
+
+    .tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;min-width:1320px;background:#0b1020}
+    thead th{position:sticky;top:0;background:#0d1630;color:#dbe4ff;text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:12px;z-index:8}
+    tbody td{padding:10px;border-bottom:1px solid rgba(36,48,74,.6);vertical-align:top}
+    tbody tr:hover{background:#0e1936}
+    .modeSel{padding:6px 8px;border-radius:10px}
+
+    tbody.pinned tr{position:sticky; top:38px; z-index:7; background:linear-gradient(180deg, rgba(96,165,250,.16), rgba(10,16,32,.9));}
+    tbody.pinned td{border-bottom:1px solid rgba(96,165,250,.35)}
+    .rowActive{outline:2px solid rgba(96,165,250,.35); outline-offset:-2px}
+    .rowDone{opacity:.86}
+    .rowRisk{background:linear-gradient(180deg, rgba(251,191,36,.08), rgba(10,16,32,.9))}
+    .rowDry{background:linear-gradient(180deg, rgba(251,113,133,.10), rgba(10,16,32,.9))}
+
+    .driverCell{display:flex;align-items:center;gap:8px}
+    .driverDot{
+      width:10px;height:10px;border-radius:999px;flex:0 0 10px;
+      box-shadow:0 0 0 3px rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.18);
+    }
+
+    .modeSel.mode-push{
+      background:linear-gradient(180deg, rgba(251,113,133,.22), rgba(251,113,133,.10));
+      border-color:rgba(251,113,133,.35);
+    }
+    .modeSel.mode-safe{
+      background:linear-gradient(180deg, rgba(74,222,128,.22), rgba(74,222,128,.10));
+      border-color:rgba(74,222,128,.35);
+    }
+    .modeSel.mode-push:focus{ box-shadow:0 0 0 3px rgba(251,113,133,.18); }
+    .modeSel.mode-safe:focus{ box-shadow:0 0 0 3px rgba(74,222,128,.18); }
+
+    .cell{display:grid;gap:6px}
+    .cellTop{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+    .cellTop .v{white-space:nowrap}
+    .istArea{display:none;gap:8px;flex-wrap:wrap;align-items:center}
+    tr.showIST .istArea{display:flex}
+    .mini{
+      width:auto;min-width:86px;
+      padding:6px 8px;border-radius:10px;border:1px solid rgba(36,48,74,.9);
+      background:rgba(10,16,32,.75);color:var(--text);font-size:12px
+    }
+    .mini:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.14)}
+    .miniWide{min-width:160px}
+    .miniSel{min-width:110px}
+    .muted{color:var(--muted)}
+    .hintPill{
+      border:1px solid rgba(36,48,74,.9);
+      background:rgba(10,16,32,.55);
+      color:var(--muted);
+      padding:4px 8px;border-radius:999px;
+      font-size:11px;
+    }
+    .warnIcon{font-size:12px}
+    .kpiLine{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    .driverColors{display:grid;gap:8px}
+    .driverColorRow{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:8px 10px;border:1px solid rgba(36,48,74,.9);border-radius:12px;
+      background:rgba(10,16,32,.55);
+    }
+    .driverColorLeft{display:flex;align-items:center;gap:10px;min-width:0}
+    .driverName{
+      color:var(--text);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      max-width:260px;
+    }
+    .colorPick{
+      width:42px;height:26px;padding:0;border-radius:10px;
+      border:1px solid rgba(36,48,74,.9);background:transparent;
+    }
+    .colorBtn{width:auto;padding:6px 10px;border-radius:10px;font-size:12px}
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>Stint Mate</h1>
+    <div class="sub">iRacing Stint Planner – Snapshot Share-Code/Link (wie früher), Fahrerfarben, Overrides, Standing/Rolling + Finish/Return Laps.</div>
+  </div>
+  <div class="pillRow">
+    <div class="pill mono">Lokale Zeit: <b id="localNow">--:--:--</b></div>
+    <div class="pill mono">Serverzeit: <b id="serverNow">--:--:--</b></div>
+    <div class="pill mono">Rennstatus: <b id="raceStatus">–</b></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT -->
+  <section class="card">
+    <div class="hd">
+      <h2>Einstellungen</h2>
+      <button id="btnExample">Beispiel laden</button>
+    </div>
+    <div class="bd">
+      <div class="grid cols3">
+        <div><label>Rennlänge (Stunden)</label><input id="raceHours" type="number" min="1" step="0.5" value="12"></div>
+        <div><label>Rennstart (lokal)</label><input id="raceStartLocal" type="datetime-local"></div>
+        <div><label>Server UTC Offset</label><input id="serverUtcOffset" type="text" value="+00:00"></div>
+      </div>
+
+      <div class="grid cols3" style="margin-top:10px">
+        <div>
+          <label>Starttyp</label>
+          <select id="startType">
+            <option value="standing" selected>Standing Start</option>
+            <option value="rolling">Rolling Start</option>
+          </select>
+        </div>
+
+        <div id="startDeltaWrap">
+          <label>Rolling-Delta (sec)</label>
+          <input id="startDeltaSec" type="number" step="1" value="60">
+        </div>
+
+        <div>
+          <label>Extra Laps nach Ende</label>
+          <div class="grid cols2" style="gap:8px">
+            <div>
+              <input id="finishLapExtra" type="number" min="0" step="1" value="1" />
+              <div class="small">Finish-Lap</div>
+            </div>
+            <div>
+              <input id="returnLapExtra" type="number" min="0" step="1" value="2" />
+              <div class="small">Return-to-Pits</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="small">Rolling-Delta = Formation/Pace als Zeit. Extra-Laps = 1 nach Ziel + Rückfahrt zur Box.</div>
+
+      <div class="btnRow" style="margin-top:10px">
+        <button id="btnNowPlus10">Jetzt + 10 min</button>
+        <button id="btnNowPlus15">Jetzt + 15 min</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid cols3">
+        <div><label>Ø Rundenzeit</label><input id="lapTime" type="text" value="02:03.0"></div>
+        <div><label>Tank (L)</label><input id="tankCapacity" type="number" step="0.1" value="97"></div>
+        <div><label>Start-Fuel (L)</label><input id="startFuel" type="number" step="0.1" value="97"></div>
+      </div>
+
+      <div class="grid cols3" style="margin-top:10px">
+        <div><label>PUSH (L/R)</label><input id="fuelPerLapPush" type="number" step="0.01" value="3.44"></div>
+        <div><label>SAFE (L/R)</label><input id="fuelPerLapSafe" type="number" step="0.01" value="3.25"></div>
+        <div>
+          <label>Default Mode</label>
+          <select id="defaultMode">
+            <option value="push" selected>PUSH</option>
+            <option value="safe">SAFE</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid cols3">
+        <div><label>Boxenverlust (s)</label><input id="pitLossSec" type="number" value="90"></div>
+        <div><label>Fuel Rate (L/s)</label><input id="fuelRate" type="number" step="0.01" value="1.0"></div>
+        <div><label>Reserve (L) (Pit-Trigger)</label><input id="fuelReserve" type="number" step="0.1" value="3.0"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="switchRow">
+        <div class="switch">
+          <input id="fuelStrategySmart" type="radio" name="fuelStrat" value="smart" checked>
+          <div><b>Smart fuel</b><div class="hint">Zielmenge + Reserve</div></div>
+        </div>
+        <div class="switch">
+          <input id="fuelStrategyFull" type="radio" name="fuelStrat" value="full">
+          <div><b>Immer volltanken</b><div class="hint">jedes Mal voll</div></div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="switch">
+        <input id="lastStopSmart" type="checkbox" checked>
+        <div>
+          <b>Letzter Stopp smart</b>
+          <div class="hint">Auch bei “Immer volltanken” am letzten Stopp nur bis Ziel+Reserve tanken</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid cols3">
+        <div><label>Reifenwechsel (s)</label><input id="tireChangeSec" type="number" value="25"></div>
+        <div><label>Reifen-Stint (min)</label><input id="tireLifeMin" type="number" value="65"></div>
+        <div>
+          <label>Reifen-Policy</label>
+          <select id="tirePolicy">
+            <option value="always">Immer</option>
+            <option value="never">Nie</option>
+            <option value="every2">Jeden 2.</option>
+            <option value="smart" selected>Smart</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid cols2">
+        <div>
+          <label>Fahrer (Name,maxMin optional)</label>
+          <textarea id="drivers">Matthias,70
+Leo,70
+Tobi,70</textarea>
+
+          <div class="divider"></div>
+          <label>Fahrerfarben</label>
+          <div id="driverColors" class="driverColors"></div>
+          <div class="small">Wird automatisch gespeichert. „Auto“ = wieder Hash-Farbe.</div>
+        </div>
+
+        <div class="grid">
+          <div class="grid cols2">
+            <div>
+              <label>Ziel</label>
+              <select id="strategyGoal">
+                <option value="minStops">Min. Stopps</option>
+                <option value="minPitTime">Min. Standzeit</option>
+                <option value="balanced" selected>Balanced</option>
+              </select>
+            </div>
+            <div>
+              <label>IST nur bei done</label>
+              <select id="istLock">
+                <option value="on" selected>ON (empfohlen)</option>
+                <option value="off">OFF</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid cols3">
+            <div><label>Stint-Cap (min, 0=aus)</label><input id="stintCapMin" type="number" value="0"></div>
+            <div><label>Fuel pro Stopp (L, 0=auto)</label><input id="fuelPerStop" type="number" step="0.1" value="0"></div>
+            <div><label>Fuel-Delta anzeigen</label><select id="showFuelDelta"><option value="on" selected>ON</option><option value="off">OFF</option></select></div>
+          </div>
+
+          <div class="grid cols3">
+            <div><label>Max. Stints am Stück / Fahrer</label><input id="maxConsec" type="number" min="1" step="1" value="2"></div>
+            <div><label>Mind. Pause (Stints) vor erneut</label><input id="minRest" type="number" min="0" step="1" value="1"></div>
+            <div><label>Warnungen</label><select id="warnLevel"><option value="soft" selected>Soft</option><option value="hard">Hard</option></select></div>
+          </div>
+
+          <div class="btnRow">
+            <button id="btnCompute">Plan berechnen</button>
+            <button id="btnResetOverrides">Reset</button>
+          </div>
+
+          <div class="pillRow"><div class="pill">Empfehlung: <b id="recSummary">–</b></div></div>
+          <div class="small" id="warnings"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT -->
+  <section class="card">
+    <div class="hd">
+      <h2>Planung + Graphen</h2>
+
+      <div class="btnRow" style="gap:8px; margin-left:auto">
+        <button id="btnShareLink" style="min-width:140px; flex:0">Share-Link</button>
+        <button id="btnExportCode" style="min-width:140px; flex:0">Export Code</button>
+        <button id="btnImportCode" style="min-width:140px; flex:0">Import Code</button>
+      </div>
+
+      <div class="pillRow" style="width:100%">
+        <span class="tag" id="tagStops">Stopps: –</span>
+        <span class="tag" id="tagTires">Reifenwechsel: –</span>
+        <span class="tag" id="tagFuel">Profile: –</span>
+      </div>
+    </div>
+
+    <div class="bd">
+      <div class="grid">
+        <label>Fahrer (Drag & Drop auf Stints)</label>
+        <div class="driversBar" id="driversBar"></div>
+
+        <label>Stint-Timeline (Gantt) – Farbe = Fahrer</label>
+        <div class="gantt" id="gantt"></div>
+        <div class="small" id="ganttLegend"></div>
+
+        <div class="charts">
+          <div class="card" style="border-radius:12px">
+            <div class="hd"><h2>Fuel über Zeit</h2></div>
+            <div class="bd"><div class="chartBox"><canvas id="chartFuel"></canvas></div></div>
+          </div>
+          <div class="card" style="border-radius:12px">
+            <div class="hd"><h2>Stopps & Boxenzeit</h2></div>
+            <div class="bd"><div class="chartBox"><canvas id="chartPit"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="card" style="border-radius:12px; margin-top:2px">
+          <div class="hd"><h2>Share / Import</h2></div>
+          <div class="bd">
+            <label>Code oder Link</label>
+            <textarea id="shareCodeBox" rows="3" placeholder="Export/Import Code oder Share-Link…" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"></textarea>
+            <div class="small">Export = Snapshot. Share-Link = URL mit Hash. Import nimmt Code oder Link.</div>
+          </div>
+        </div>
+
+        <div class="card" style="border-radius:12px">
+          <div class="hd">
+            <h2>Stint Tabelle</h2>
+            <div class="kpiLine">
+              <span class="hintPill">Klick auf Zeile = IST auf/zu</span>
+              <span class="hintPill">Aktueller Stint oben gepinnt</span>
+              <span class="hintPill">PUSH rot / SAFE grün</span>
+            </div>
+          </div>
+          <div class="bd">
+            <div class="tableWrap">
+              <table id="stintTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Fahrer</th>
+                    <th>Mode</th>
+                    <th>Stint</th>
+                    <th>Wechsel</th>
+                    <th>Laps</th>
+                    <th>Fuel Start → End</th>
+                    <th>Getankt</th>
+                    <th>Reifen</th>
+                    <th>Pit</th>
+                    <th>Status</th>
+                    <th>Notiz</th>
+                  </tr>
+                </thead>
+                <tbody class="pinned" id="tbodyPinned"></tbody>
+                <tbody id="tbodyMain"></tbody>
+              </table>
+            </div>
+            <div class="small" style="margin-top:10px">
+              Finish-Lap + Return-to-Pits werden in die Fuel-Planung eingerechnet. “Letzter Stopp smart” verhindert sinnloses Volltanken am Ende.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const $ = (id)=>document.getElementById(id);
+
+  let lastPlan = null;
+  let manualAssignments = new Map();
+  let manualModes = new Map();
+  const actuals = new Map();
+  const istOpen = new Set();
+
+  // --------- Driver color overrides (manual picker) ----------
+  const driverColorOverrides = new Map(); // name -> "#rrggbb"
+  const LS_KEY_COLORS = "stintMate_driverColors_v1";
+
+  // --------- Share snapshot ----------
+  const SHARE_VER = 1;
+  const LS_STATE = "stintMate_state_v1";
+
+  // --------- Color mapping (default hash) ----------
+  function hashToHue(str){
+    let h=0;
+    for(let i=0;i<str.length;i++) h = (h*31 + str.charCodeAt(i)) >>> 0;
+    return h % 360;
+  }
+  function hexToRgb(hex){
+    const h = String(hex||"").trim().replace("#","");
+    if(h.length !== 6) return null;
+    const r = parseInt(h.slice(0,2),16);
+    const g = parseInt(h.slice(2,4),16);
+    const b = parseInt(h.slice(4,6),16);
+    if([r,g,b].some(n=>Number.isNaN(n))) return null;
+    return {r,g,b};
+  }
+  function rgbaFromHex(hex, a){
+    const rgb = hexToRgb(hex);
+    if(!rgb) return null;
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
+  }
+  function driverColorHSLA(name, a){
+    const key = String(name||"");
+    const ov = driverColorOverrides.get(key);
+    if(ov){
+      const rgba = rgbaFromHex(ov, a);
+      if(rgba) return rgba;
+    }
+    const hue = hashToHue(key);
+    return `hsla(${hue}, 70%, 60%, ${a})`;
+  }
+
+  function loadDriverColors(){
+    try{
+      const raw = localStorage.getItem(LS_KEY_COLORS);
+      if(!raw) return;
+      const obj = JSON.parse(raw);
+      if(obj && typeof obj === "object"){
+        for(const [k,v] of Object.entries(obj)){
+          if(typeof v === "string" && v.startsWith("#") && v.length===7){
+            driverColorOverrides.set(k, v);
+          }
+        }
+      }
+    }catch{}
+  }
+  function saveDriverColors(){
+    try{
+      const obj = {};
+      for(const [k,v] of driverColorOverrides.entries()) obj[k]=v;
+      localStorage.setItem(LS_KEY_COLORS, JSON.stringify(obj));
+    }catch{}
+  }
+  function hslToHex(h, s, l){
+    s/=100; l/=100;
+    const c=(1-Math.abs(2*l-1))*s;
+    const x=c*(1-Math.abs((h/60)%2-1));
+    const m=l-c/2;
+    let r=0,g=0,b=0;
+    if(0<=h && h<60){r=c;g=x;b=0}
+    else if(60<=h && h<120){r=x;g=c;b=0}
+    else if(120<=h && h<180){r=0;g=c;b=x}
+    else if(180<=h && h<240){r=0;g=x;b=c}
+    else if(240<=h && h<300){r=x;g=0;b=c}
+    else {r=c;g=0;b=x}
+    const toHex=(v)=>Math.round((v+m)*255).toString(16).padStart(2,'0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+  function renderDriverColorsUI(){
+    const box = $("driverColors");
+    if(!box) return;
+    const drivers = driversFromTextarea($("drivers").value).map(d=>d.name);
+
+    for(const k of [...driverColorOverrides.keys()]){
+      if(!drivers.includes(k)) driverColorOverrides.delete(k);
+    }
+    saveDriverColors();
+
+    box.innerHTML = "";
+    drivers.forEach(name=>{
+      const ov = driverColorOverrides.get(name);
+      const hue = hashToHue(name);
+      const defaultHex = hslToHex(hue, 70, 60);
+
+      const row = document.createElement("div");
+      row.className = "driverColorRow";
+      row.innerHTML = `
+        <div class="driverColorLeft">
+          <span class="driverDot" style="background:${driverColorHSLA(name,1)}"></span>
+          <div class="driverName" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center">
+          <input class="colorPick" type="color" value="${ov || defaultHex}" data-color-pick="${escapeHtml(name)}">
+          <button class="colorBtn" type="button" data-color-reset="${escapeHtml(name)}">Auto</button>
+        </div>
+      `;
+      box.appendChild(row);
+    });
+
+    box.querySelectorAll("[data-color-pick]").forEach(inp=>{
+      inp.addEventListener("input",(e)=>{
+        const name = e.target.getAttribute("data-color-pick");
+        driverColorOverrides.set(name, e.target.value);
+        saveDriverColors();
+        scheduleAutosave();
+        if(lastPlan){
+          renderDriversBar();
+          renderGantt(lastPlan);
+          renderTable(lastPlan);
+        }
+        renderDriverColorsUI();
+      });
+    });
+
+    box.querySelectorAll("[data-color-reset]").forEach(btn=>{
+      btn.addEventListener("click",(e)=>{
+        const name = e.target.getAttribute("data-color-reset");
+        driverColorOverrides.delete(name);
+        saveDriverColors();
+        scheduleAutosave();
+        if(lastPlan){
+          renderDriversBar();
+          renderGantt(lastPlan);
+          renderTable(lastPlan);
+        }
+        renderDriverColorsUI();
+      });
+    });
+  }
+
+  // --------- utils ----------
+  function parseOffsetToMinutes(s){
+    const m = String(s||"").trim().match(/^([+-])(\d{2}):?(\d{2})$/);
+    if(!m) return null;
+    const sign = m[1] === "-" ? -1 : 1;
+    return sign * (parseInt(m[2],10)*60 + parseInt(m[3],10));
+  }
+  function fmtTimeHHMMSS(d){
+    const pad=(n)=>String(n).padStart(2,'0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function fmtDateTime(d){
+    const pad=(n)=>String(n).padStart(2,'0');
+    return `${pad(d.getDate())}.${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function parseLapTimeToSeconds(s){
+    s = String(s||"").trim();
+    if(!s) return null;
+    if(/^\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+    const m = s.match(/^(\d+):(\d{2})(?:\.(\d{1,3}))?$/);
+    if(!m) return null;
+    const min = parseInt(m[1],10);
+    const sec = parseInt(m[2],10);
+    const ms = m[3] ? parseInt(m[3].padEnd(3,'0'),10) : 0;
+    return min*60 + sec + ms/1000;
+  }
+  function secondsToMMSS(s){
+    const min = Math.floor(s/60);
+    const sec = s - min*60;
+    const ss = String(Math.floor(sec)).padStart(2,'0');
+    const ms = Math.round((sec - Math.floor(sec))*1000);
+    return `${String(min).padStart(2,'0')}:${ss}.${String(ms).padStart(3,'0')}`;
+  }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+  function escapeHtml(s){
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+  function driversFromTextarea(txt){
+    const lines = String(txt||"").split("\n").map(x=>x.trim()).filter(Boolean);
+    return lines.map(line=>{
+      const parts = line.split(",").map(x=>x.trim());
+      const name = parts[0] || "Driver";
+      const maxMin = parts[1] ? parseFloat(parts[1]) : null;
+      return {name, maxMin: (Number.isFinite(maxMin) && maxMin>0) ? maxMin : null};
+    });
+  }
+  function numOrNull(v){
+    if(v===null||v===undefined) return null;
+    const s=String(v).trim();
+    if(!s) return null;
+    const n=parseFloat(s.replace(",","."));
+    return Number.isFinite(n) ? n : null;
+  }
+  function getFuelStrategy(){
+    return document.querySelector('input[name="fuelStrat"]:checked')?.value || "smart";
+  }
+  function showDelta(){ return $("showFuelDelta").value === "on"; }
+  function istLockOn(){ return $("istLock").value === "on"; }
+
+  // --------- Start logic ----------
+  function updateStartUI(){
+    const isRolling = $("startType").value === "rolling";
+    $("startDeltaWrap").style.display = isRolling ? "block" : "none";
+    if(!isRolling) $("startDeltaSec").value = 0;
+  }
+  function getStartDeltaSec(){
+    const type = $("startType").value;
+    const v = numOrNull($("startDeltaSec").value);
+    if(type === "standing") return 0;
+    return Math.max(0, v ?? 60);
+  }
+  function getExtraLaps(){
+    const f = numOrNull($("finishLapExtra").value) ?? 0;
+    const r = numOrNull($("returnLapExtra").value) ?? 0;
+    return Math.max(0, Math.round(f)) + Math.max(0, Math.round(r));
+  }
+
+  // --------- time ----------
+  function getRaceStartLocalDate(){
+    const v = $("raceStartLocal").value;
+    if(v){
+      const d = new Date(v);
+      if(!Number.isNaN(d.getTime())) return d;
+    }
+    return new Date(Date.now() + 10*60*1000);
+  }
+  function getRaceStartServerDate(){
+    const startLocal = getRaceStartLocalDate();
+    const serverOff = parseOffsetToMinutes($("serverUtcOffset").value);
+    if(serverOff===null) return startLocal;
+    const utcMs = startLocal.getTime() + startLocal.getTimezoneOffset()*60*1000;
+    return new Date(utcMs + serverOff*60*1000);
+  }
+  function getServerNowDate(){
+    const serverOff = parseOffsetToMinutes($("serverUtcOffset").value);
+    const now = new Date();
+    if(serverOff===null) return now;
+    const utcMs = now.getTime() + now.getTimezoneOffset()*60*1000;
+    return new Date(utcMs + serverOff*60*1000);
+  }
+  function isStintDone(stintEndSec){
+    const start = getRaceStartLocalDate().getTime();
+    return Date.now() >= start + stintEndSec*1000;
+  }
+  function currentStintIdx(plan){
+    if(!plan) return null;
+    const start = getRaceStartLocalDate().getTime();
+    const now = Date.now();
+    const elapsed = (now - start) / 1000;
+    if(elapsed < 0) return null;
+    for(const s of plan.stints){
+      if(elapsed >= s.startSec && elapsed < s.endSec) return s.idx;
+    }
+    return null;
+  }
+
+  // -------------------- SHARE (Snapshot) --------------------
+  function collectState(){
+    const inputs = [
+      "raceHours","raceStartLocal","serverUtcOffset",
+      "startType","startDeltaSec","finishLapExtra","returnLapExtra",
+      "lapTime","tankCapacity","startFuel",
+      "fuelPerLapPush","fuelPerLapSafe","defaultMode",
+      "pitLossSec","fuelRate","fuelReserve",
+      "tireChangeSec","tireLifeMin","tirePolicy",
+      "strategyGoal","istLock","stintCapMin","fuelPerStop",
+      "showFuelDelta","maxConsec","minRest","warnLevel"
+    ];
+
+    const values = {};
+    inputs.forEach(id=>{
+      const el = $(id);
+      if(!el) return;
+      values[id] = el.value;
+    });
+
+    values.fuelStrat = getFuelStrategy();
+    values.lastStopSmart = $("lastStopSmart")?.checked ? 1 : 0;
+    values.drivers = $("drivers")?.value ?? "";
+
+    const mapToObj = (m)=>Object.fromEntries([...m.entries()]);
+    values.driverColors = Object.fromEntries([...driverColorOverrides.entries()]);
+    values.manualAssignments = mapToObj(manualAssignments);
+    values.manualModes = mapToObj(manualModes);
+    values.actuals = Object.fromEntries([...actuals.entries()]);
+    values.istOpen = [...istOpen.values()];
+
+    return { v: SHARE_VER, t: Date.now(), values };
+  }
+
+  function applyState(state){
+    if(!state || !state.values) return false;
+    const v = state.values;
+
+    for(const [id,val] of Object.entries(v)){
+      const el = $(id);
+      if(el && typeof val !== "object") el.value = String(val);
+    }
+
+    if(v.fuelStrat === "full") $("fuelStrategyFull").checked = true;
+    else $("fuelStrategySmart").checked = true;
+
+    if($("lastStopSmart")) $("lastStopSmart").checked = !!v.lastStopSmart;
+
+    if($("drivers") && typeof v.drivers === "string") $("drivers").value = v.drivers;
+
+    driverColorOverrides.clear();
+    if(v.driverColors && typeof v.driverColors === "object"){
+      for(const [name,color] of Object.entries(v.driverColors)){
+        if(typeof color === "string" && color.startsWith("#") && color.length===7){
+          driverColorOverrides.set(name,color);
+        }
+      }
+      saveDriverColors();
+    }
+
+    manualAssignments = new Map();
+    manualModes = new Map();
+    actuals.clear();
+    istOpen.clear();
+
+    if(v.manualAssignments && typeof v.manualAssignments === "object"){
+      for(const [k,val] of Object.entries(v.manualAssignments)){
+        manualAssignments.set(+k, String(val));
+      }
+    }
+    if(v.manualModes && typeof v.manualModes === "object"){
+      for(const [k,val] of Object.entries(v.manualModes)){
+        manualModes.set(+k, String(val));
+      }
+    }
+    if(v.actuals && typeof v.actuals === "object"){
+      for(const [k,obj] of Object.entries(v.actuals)){
+        if(obj && typeof obj === "object") actuals.set(+k, obj);
+      }
+    }
+    if(Array.isArray(v.istOpen)){
+      v.istOpen.forEach(x=>istOpen.add(+x));
+    }
+
+    updateStartUI();
+    renderDriverColorsUI();
+    recompute(false);
+    return true;
+  }
+
+  function b64UrlEncode(str){
+    const b64 = btoa(unescape(encodeURIComponent(str)));
+    return b64.replaceAll("+","-").replaceAll("/","_").replaceAll("=","");
+  }
+  function b64UrlDecode(b64url){
+    let s = String(b64url).replaceAll("-","+").replaceAll("_","/");
+    const pad = s.length % 4;
+    if(pad) s += "=".repeat(4-pad);
+    const str = decodeURIComponent(escape(atob(s)));
+    return str;
+  }
+  function exportCode(){
+    const state = collectState();
+    const json = JSON.stringify(state);
+    return b64UrlEncode(json);
+  }
+  function importCode(code){
+    try{
+      const json = b64UrlDecode(code.trim());
+      const state = JSON.parse(json);
+      return applyState(state);
+    }catch(e){
+      return false;
+    }
+  }
+  function setHashFromCode(code){ location.hash = code; }
+  function getHashCode(){
+    const h = location.hash || "";
+    return h.startsWith("#") ? h.slice(1).trim() : "";
+  }
+
+  let _saveTimer=null;
+  function scheduleAutosave(){
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(()=>{
+      try{
+        const code = exportCode();
+        localStorage.setItem(LS_STATE, code);
+      }catch{}
+    }, 350);
+  }
+
+  // --------- charts ----------
+  let fuelChart=null, pitChart=null;
+  function ensureCharts(){
+    if(!fuelChart){
+      fuelChart = new Chart($("chartFuel"), {
+        type:"line",
+        data:{labels:[],datasets:[{label:"Fuel (L)",data:[],tension:0.25,pointRadius:0}]},
+        options:{responsive:true,maintainAspectRatio:false,
+          scales:{x:{ticks:{color:"#9aa4b2"},grid:{color:"rgba(36,48,74,.35)"}},
+                  y:{ticks:{color:"#9aa4b2"},grid:{color:"rgba(36,48,74,.35)"}}},
+          plugins:{legend:{labels:{color:"#e6e9f2"}}}
+        }
+      });
+    }
+    if(!pitChart){
+      pitChart = new Chart($("chartPit"), {
+        type:"bar",
+        data:{labels:[],datasets:[{label:"Pit Standzeit (s)",data:[]}]},
+        options:{responsive:true,maintainAspectRatio:false,
+          scales:{x:{ticks:{color:"#9aa4b2"},grid:{color:"rgba(36,48,74,.35)"}},
+                  y:{ticks:{color:"#9aa4b2"},grid:{color:"rgba(36,48,74,.35)"}}},
+          plugins:{legend:{labels:{color:"#e6e9f2"}}}
+        }
+      });
+    }
+  }
+
+  function applyDriverRules(stints){
+    const maxConsec = Math.max(1, parseInt($("maxConsec").value||"2",10));
+    const minRest = Math.max(0, parseInt($("minRest").value||"1",10));
+    const consecCount = new Map();
+    const lastSeenIdx = new Map();
+    let prevDriver = null;
+    for(const s of stints){
+      if(s.driver === prevDriver) consecCount.set(s.driver, (consecCount.get(s.driver)||1) + 1);
+      else consecCount.set(s.driver, 1);
+      s.ruleConsec = (consecCount.get(s.driver) > maxConsec);
+
+      const last = lastSeenIdx.get(s.driver);
+      if(last !== undefined){
+        const gap = (s.idx - last - 1);
+        s.ruleRest = (gap < minRest);
+        s.ruleRestGap = gap;
+      } else { s.ruleRest=false; s.ruleRestGap=null; }
+      lastSeenIdx.set(s.driver, s.idx);
+      prevDriver = s.driver;
+    }
+  }
+
+  // --------- compute plan ----------
+  function computePlan(){
+    const raceHours = parseFloat($("raceHours").value);
+    const lapSec = parseLapTimeToSeconds($("lapTime").value);
+    const tankCap = parseFloat($("tankCapacity").value);
+    const startFuel = parseFloat($("startFuel").value);
+
+    const fuelPush = parseFloat($("fuelPerLapPush").value);
+    const fuelSafe = parseFloat($("fuelPerLapSafe").value);
+    const defaultMode = $("defaultMode").value;
+
+    const pitLossSec = parseFloat($("pitLossSec").value);
+    const fuelRate = parseFloat($("fuelRate").value);
+    const reserveL = parseFloat($("fuelReserve").value);
+
+    const tireChangeSec = parseFloat($("tireChangeSec").value);
+    const tireLifeMin = parseFloat($("tireLifeMin").value);
+    const tirePolicy = $("tirePolicy").value;
+
+    const goal = $("strategyGoal").value;
+    const stintCapMin = parseFloat($("stintCapMin").value);
+    const fuelPerStopFixed = parseFloat($("fuelPerStop").value);
+
+    const drivers = driversFromTextarea($("drivers").value);
+    const serverOff = parseOffsetToMinutes($("serverUtcOffset").value);
+
+    const warns=[];
+    if(!Number.isFinite(raceHours)||raceHours<=0) warns.push("Rennlänge ungültig.");
+    if(!Number.isFinite(lapSec)||lapSec<=0) warns.push("Rundenzeit ungültig.");
+    if(!Number.isFinite(tankCap)||tankCap<=0) warns.push("Tankkapazität ungültig.");
+    if(!Number.isFinite(startFuel)||startFuel<0) warns.push("Start-Fuel ungültig.");
+    if(startFuel>tankCap+0.001) warns.push("Start-Fuel > Tankkapazität.");
+    if(!Number.isFinite(fuelPush)||fuelPush<=0) warns.push("PUSH Verbrauch ungültig.");
+    if(!Number.isFinite(fuelSafe)||fuelSafe<=0) warns.push("SAFE Verbrauch ungültig.");
+    if(drivers.length===0) warns.push("Mind. 1 Fahrer eintragen.");
+    if(serverOff===null) warns.push("Server UTC Offset ungültig.");
+    if(warns.length){
+      $("warnings").innerHTML = warns.map(w=>`<span class="tag warn">⚠ ${escapeHtml(w)}</span>`).join(" ");
+      return null;
+    } else $("warnings").innerHTML = "";
+
+    const fuelStrat = getFuelStrategy();
+
+    const baseRaceSec = raceHours*3600;
+    const startDeltaSec = getStartDeltaSec();
+    const extraLaps = getExtraLaps();
+    const extraSec = extraLaps * lapSec;
+
+    const raceSec = baseRaceSec + startDeltaSec + extraSec;
+    const maxSecTire = tireLifeMin*60;
+
+    const maxFuelUsable = clamp(tankCap - reserveL, 0, tankCap);
+    const maxLapsPush = Math.max(2, Math.floor(maxFuelUsable / fuelPush));
+    const maxLapsSafe = Math.max(2, Math.floor(maxFuelUsable / fuelSafe));
+    const maxSecPush = maxLapsPush * lapSec;
+    const maxSecSafe = maxLapsSafe * lapSec;
+
+    function getModeForStint(idx){ return manualModes.get(idx) || defaultMode; }
+    function getDriverForStint(idx,fallback){ return manualAssignments.get(idx) || fallback; }
+    function driverLimitSec(name){
+      const d = drivers.find(x=>x.name===name);
+      return d && d.maxMin ? d.maxMin*60 : Infinity;
+    }
+    function chooseStintSec(remainingRaceSec, mode, driverName){
+      const maxSecFuel = (mode==="safe") ? maxSecSafe : maxSecPush;
+      let maxSec = Math.min(maxSecFuel, maxSecTire, remainingRaceSec);
+      const cap = Number.isFinite(stintCapMin) && stintCapMin>0 ? stintCapMin*60 : Infinity;
+      maxSec = Math.min(maxSec, cap, driverLimitSec(driverName));
+      if(goal==="minPitTime" && remainingRaceSec > 3*maxSec) maxSec *= 0.98;
+      if(goal==="balanced" && remainingRaceSec > 3*maxSec) maxSec *= 0.995;
+      const laps = Math.max(2, Math.floor(maxSec / lapSec));
+      return laps * lapSec;
+    }
+
+    let tireAgeSec=0, tireChanges=0, pitStops=0;
+    function shouldChangeTires(stopIndex, nextStintSec){
+      if(tirePolicy==="always") return true;
+      if(tirePolicy==="never") return false;
+      if(tirePolicy==="every2") return (stopIndex%2===1);
+      const remaining = maxSecTire - tireAgeSec;
+      if(nextStintSec > remaining - 60) return true;
+      if(stopIndex % 2 === 1) return true;
+      return false;
+    }
+
+    const stints=[];
+    let t=0, stintIdx=1, driverIdx=0;
+    let fuel=clamp(startFuel,0,tankCap);
+
+    while(t < raceSec - 1){
+      const remainingRaceSec = raceSec - t;
+      const fallbackDriver = drivers[driverIdx % drivers.length].name;
+
+      let driver = getDriverForStint(stintIdx, fallbackDriver);
+      let mode = getModeForStint(stintIdx);
+      let perLap = (mode==="safe") ? fuelSafe : fuelPush;
+
+      let stintSec = chooseStintSec(remainingRaceSec, mode, driver);
+      let laps = Math.max(2, Math.floor(stintSec / lapSec));
+      stintSec = laps * lapSec;
+
+      const maxLapsByFuelNow = Math.max(1, Math.floor((fuel - reserveL) / perLap));
+      if(maxLapsByFuelNow < laps){
+        laps = Math.max(2, maxLapsByFuelNow);
+        stintSec = laps * lapSec;
+      }
+
+      const a = actuals.get(stintIdx) || {};
+      const aLaps = numOrNull(a.laps);
+      const aFuelStart = numOrNull(a.fuelStart);
+      const aFuelEnd = numOrNull(a.fuelEnd);
+
+      if(aLaps!==null && aLaps>=1){
+        laps = Math.round(aLaps);
+        stintSec = laps * lapSec;
+      }
+
+      const fuelStart = (aFuelStart!==null) ? clamp(aFuelStart, -999, tankCap) : fuel;
+      const fuelEnd = (aFuelEnd!==null) ? clamp(aFuelEnd, -999, tankCap) : (fuelStart - (laps*perLap));
+
+      const startSec=t;
+      const endSec=Math.min(raceSec, t + stintSec);
+
+      stints.push({
+        idx:stintIdx, driver, mode, startSec, endSec, laps,
+        fuelStart, fuelEnd,
+        fuelAdded:0, tireChange:false, pitStandSec:0,
+        tankAfterPit:null,
+        ruleConsec:false, ruleRest:false, ruleRestGap:null
+      });
+
+      t = endSec;
+      fuel = fuelEnd;
+      tireAgeSec += stintSec;
+
+      if(t >= raceSec - 1) break;
+
+      pitStops++;
+
+      const nextRemaining = raceSec - t;
+      const nextIdx = stintIdx + 1;
+      const nextFallbackDriver = drivers[(driverIdx+1) % drivers.length].name;
+      const nextDriver = getDriverForStint(nextIdx, nextFallbackDriver);
+      const nextMode = getModeForStint(nextIdx);
+      const nextPerLap = (nextMode==="safe") ? fuelSafe : fuelPush;
+
+      let nextStintSec = chooseStintSec(nextRemaining, nextMode, nextDriver);
+      let nextLaps = Math.max(2, Math.floor(nextStintSec / lapSec));
+      const nextA = actuals.get(nextIdx) || {};
+      const nextALaps = numOrNull(nextA.laps);
+      if(nextALaps!==null && nextALaps>=1) nextLaps = Math.round(nextALaps);
+      nextStintSec = nextLaps * lapSec;
+
+      const changeTiresPlan = shouldChangeTires(pitStops, nextStintSec);
+      if(changeTiresPlan){ tireChanges++; tireAgeSec = 0; }
+
+      // ---------- Fuel target (Full + Last Stop Smart) ----------
+      let targetAfter;
+
+      const isLikelyLastStop = nextRemaining <= Math.max(maxSecPush, maxSecSafe) + 120; // +2min buffer
+      const lastStopSmartOn = $("lastStopSmart")?.checked ?? true;
+
+      if(fuelStrat==="full"){
+        if(lastStopSmartOn && isLikelyLastStop){
+          const lapsToFinish = Math.ceil((raceSec - t) / lapSec);
+          const fuelToFinish = lapsToFinish * nextPerLap + reserveL;
+          targetAfter = Math.min(tankCap, fuelToFinish);
+        } else {
+          targetAfter = tankCap;
+        }
+      } else {
+        const neededForNext = nextLaps * nextPerLap + reserveL;
+        const lapsToFinish = Math.ceil((raceSec - t) / lapSec);
+        const fuelToFinish = lapsToFinish * nextPerLap + reserveL;
+        targetAfter = Math.min(tankCap, neededForNext);
+        if(goal!=="minStops") targetAfter = Math.min(targetAfter, fuelToFinish);
+      }
+
+      let addPlan = targetAfter - fuel;
+      if(fuelPerStopFixed && fuelPerStopFixed > 0) addPlan = fuelPerStopFixed;
+      addPlan = clamp(addPlan, 0, tankCap - fuel);
+
+      const aFueled = numOrNull(a.fueled);
+      const aPit = numOrNull(a.pit);
+      const aTires = (a.tires==="yes") ? true : (a.tires==="no") ? false : null;
+
+      const fueledLiters = (aFueled!==null) ? clamp(aFueled, 0, tankCap - fuel) : addPlan;
+      const tiresFinal = (aTires!==null) ? aTires : changeTiresPlan;
+
+      const fuelTime = (fuelRate > 0) ? (fueledLiters / fuelRate) : 0;
+      const standPlan = pitLossSec + fuelTime + (tiresFinal ? tireChangeSec : 0);
+      const standFinal = (aPit!==null) ? Math.max(0, aPit) : standPlan;
+
+      const prev = stints[stints.length - 1];
+      prev.fuelAdded = fueledLiters;
+      prev.tireChange = tiresFinal;
+      prev.pitStandSec = standFinal;
+      prev.tankAfterPit = clamp(prev.fuelEnd + fueledLiters, -999, tankCap);
+
+      t += standFinal; if(t > raceSec) t = raceSec;
+      fuel = clamp(fuel + fueledLiters, -999, tankCap);
+
+      stintIdx++;
+      driverIdx++;
+    }
+
+    if(stints.length){
+      const last = stints[stints.length-1];
+      last.fuelAdded = 0; last.tireChange = false; last.pitStandSec = 0; last.tankAfterPit = null;
+    }
+
+    applyDriverRules(stints);
+
+    const totalPitStand = stints.reduce((a,s)=>a+(s.pitStandSec||0),0);
+    const totalLaps = stints.reduce((a,s)=>a+s.laps,0);
+    const avgStintMin = (stints.reduce((a,s)=>a+(s.endSec-s.startSec),0) / stints.length) / 60;
+
+    let anyDry=false, anyLow=false;
+    for(const s of stints){
+      if(s.fuelEnd < -0.01) anyDry=true;
+      else if(s.fuelEnd < reserveL + 0.2) anyLow=true;
+    }
+
+    const rec = [
+      `${pitStops} Stopps`,
+      `${tireChanges} Reifenwechsel`,
+      `Ø Stint ${avgStintMin.toFixed(1)} min`,
+      `~${totalLaps} Runden`,
+      `Pit ~${Math.round(totalPitStand)} s`,
+      `StartΔ ${Math.round(startDeltaSec)}s`,
+      `ExtraLaps ${extraLaps}`,
+      anyDry ? "⛔ DRY Risiko" : (anyLow ? "⚠ Low Fuel" : "Fuel ok")
+    ].join(" · ");
+
+    return { stints, pitStops, tireChanges, rec, fuelPush, fuelSafe, startDeltaSec, extraLaps };
+  }
+
+  // --------- render drivers bar ----------
+  function renderDriversBar(){
+    const bar = $("driversBar");
+    bar.innerHTML = "";
+    const drivers = driversFromTextarea($("drivers").value);
+    drivers.forEach(d=>{
+      const chip=document.createElement("div");
+      chip.className="drvChip";
+      chip.draggable=true;
+      chip.innerHTML = `<span class="drvDot" style="background:${driverColorHSLA(d.name,1)}"></span><b>${escapeHtml(d.name)}</b>${d.maxMin?`<span class="tag">max ${d.maxMin}m</span>`:""}`;
+      chip.addEventListener("dragstart",(e)=>{
+        e.dataTransfer.setData("application/x-driver", d.name);
+        e.dataTransfer.effectAllowed="copyMove";
+        const ghost = chip.cloneNode(true);
+        ghost.style.position="absolute"; ghost.style.top="-9999px";
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 10, 10);
+        setTimeout(()=>ghost.remove(), 0);
+      });
+      bar.appendChild(chip);
+    });
+    const hint=document.createElement("div");
+    hint.className="driversHint";
+    hint.textContent="Zieh Fahrer auf Stint (Gantt).";
+    bar.appendChild(hint);
+  }
+
+  // --------- render gantt ----------
+  function renderGantt(plan){
+    const gantt=$("gantt");
+    gantt.innerHTML="";
+    const lapSec = parseLapTimeToSeconds($("lapTime").value) || 0;
+    const baseRaceSec=parseFloat($("raceHours").value)*3600;
+    const raceSec = baseRaceSec + getStartDeltaSec() + getExtraLaps()*lapSec;
+
+    const segs=[];
+    plan.stints.forEach((s)=>{
+      segs.push({type:"run", s, start:s.startSec, end:s.endSec});
+      if(s.pitStandSec && s.pitStandSec>0){
+        segs.push({type:"pit", s, start:s.endSec, end:s.endSec+s.pitStandSec});
+      }
+    });
+
+    segs.forEach(seg=>{
+      const left=(seg.start/raceSec)*100;
+      const width=((seg.end-seg.start)/raceSec)*100;
+      if(width<=0.12) return;
+
+      const d=document.createElement("div");
+      d.className="seg " + (seg.type==="pit" ? "pit" : "");
+      d.style.left=left+"%";
+      d.style.width=width+"%";
+
+      if(seg.type==="run"){
+        const cTop = driverColorHSLA(seg.s.driver, 0.92);
+        const cBot = driverColorHSLA(seg.s.driver, 0.55);
+        d.style.background = `linear-gradient(180deg, ${cTop}, ${cBot})`;
+
+        if(isStintDone(seg.s.endSec)) d.classList.add("done");
+
+        d.addEventListener("dragover",(e)=>{ e.preventDefault(); d.classList.add("dropHover"); });
+        d.addEventListener("dragleave",()=>d.classList.remove("dropHover"));
+        d.addEventListener("drop",(e)=>{
+          e.preventDefault();
+          d.classList.remove("dropHover");
+          const fromDriver = e.dataTransfer.getData("application/x-driver");
+          if(fromDriver){
+            manualAssignments.set(seg.s.idx, fromDriver);
+            scheduleAutosave();
+            recompute(false);
+          }
+        });
+
+        const lbl=document.createElement("div");
+        lbl.className="lbl";
+        lbl.textContent=seg.s.driver;
+        d.appendChild(lbl);
+
+        const sub=document.createElement("div");
+        sub.className="sub";
+        sub.innerHTML = seg.s.mode==="push" ? `<b style="color:#fb7185">PUSH</b>` : `<b style="color:#16a34a">SAFE</b>`;
+        d.appendChild(sub);
+      } else {
+        const lbl=document.createElement("div");
+        lbl.className="lbl"; lbl.textContent="PIT";
+        d.appendChild(lbl);
+      }
+
+      const tm=document.createElement("div");
+      tm.className="time";
+      tm.textContent=`${Math.floor(seg.start/3600)}h${String(Math.floor((seg.start%3600)/60)).padStart(2,'0')}`;
+      d.appendChild(tm);
+
+      gantt.appendChild(d);
+    });
+
+    $("ganttLegend").innerHTML = `<span class="tag">Farbe = Fahrer</span> <span class="tag warn">PIT = schraffiert</span> <span class="tag">StartΔ + ExtraLaps aktiv</span>`;
+  }
+
+  // --------- table ----------
+  function renderRowHTML(s, drivers, reserveL){
+    const startLocal=getRaceStartLocalDate();
+    const startServer=getRaceStartServerDate();
+
+    const stintDurSec=Math.max(0,s.endSec-s.startSec);
+    const changeAtLocal=new Date(startLocal.getTime()+s.endSec*1000);
+    const changeAtServer=new Date(startServer.getTime()+s.endSec*1000);
+    const changeStr=`${fmtDateTime(changeAtServer)} / ${fmtDateTime(changeAtLocal)}`;
+
+    const done=isStintDone(s.endSec);
+    const isDry = s.fuelEnd < -0.01;
+    const isRisk = !isDry && (s.fuelEnd < reserveL + 0.2);
+
+    const statusTag = done ? `<span class="tag">done</span>`
+      : (isDry ? `<span class="tag bad">⛔ dry</span>` : (isRisk ? `<span class="tag warn">⚠ low</span>` : `<span class="tag ok">ok</span>`));
+
+    const driverSel = `
+      <div class="driverCell">
+        <span class="driverDot" style="background:${driverColorHSLA(s.driver,1)}"></span>
+        <select class="modeSel mono" data-driver-sel="${s.idx}">
+          ${drivers.map(n=>`<option value="${escapeHtml(n)}" ${n===s.driver?"selected":""}>${escapeHtml(n)}</option>`).join("")}
+        </select>
+      </div>
+    `;
+
+    const modeClass = s.mode === "safe" ? "mode-safe" : "mode-push";
+    const modeSel = `
+      <select class="modeSel mono ${modeClass}" data-mode-sel="${s.idx}">
+        <option value="push" ${s.mode==="push"?"selected":""}>PUSH</option>
+        <option value="safe" ${s.mode==="safe"?"selected":""}>SAFE</option>
+      </select>
+    `;
+
+    const a = actuals.get(s.idx) || {};
+    const lock = istLockOn() && !done;
+    const dis = lock ? "disabled" : "";
+    const lockHint = lock ? `<span class="hintPill">IST locked</span>` : "";
+
+    const mkCell = (valueHtml, istInnerHtml) => `
+      <div class="cell">
+        <div class="cellTop">
+          <div class="v mono">${valueHtml}</div>
+          ${lockHint}
+        </div>
+        <div class="istArea">${istInnerHtml}</div>
+      </div>
+    `;
+
+    const fuelValue = `${s.fuelStart.toFixed(1)} → ${s.fuelEnd.toFixed(1)} L ${isDry?`<span class="warnIcon">⛔</span>`:(isRisk?`<span class="warnIcon">⚠</span>`:"")}`;
+
+    const fueledStr = (s.fuelAdded && s.fuelAdded>0) ? `+${s.fuelAdded.toFixed(1)} L` : "–";
+    let fueledValue = fueledStr;
+    if(showDelta() && s.tankAfterPit!==null && s.fuelAdded>0){
+      fueledValue = `${fueledStr} <span class="muted">(→ ${s.tankAfterPit.toFixed(1)} L)</span>`;
+    }
+
+    const tiresStr = s.tireChange ? `<span class="tag ok">Wechsel</span>` : `<span class="tag">kein</span>`;
+
+    const badges = [];
+    if(s.ruleConsec) badges.push(`<span class="tag warn">⚠ >max consec</span>`);
+    if(s.ruleRest) badges.push(`<span class="tag warn">⚠ rest ${s.ruleRestGap}</span>`);
+    const badgeLine = badges.length ? badges.join(" ")+" " : "";
+
+    return {
+      html: `
+        <td class="mono">${s.idx}</td>
+        <td>${driverSel}</td>
+        <td>${modeSel}</td>
+        <td class="mono">${secondsToMMSS(stintDurSec)}</td>
+        <td class="mono">${escapeHtml(changeStr)}</td>
+        <td>${mkCell(`${s.laps}`, `<input class="mini mono" ${dis} data-a-laps="${s.idx}" placeholder="Laps" value="${a.laps ?? ""}">`)}</td>
+        <td>${mkCell(fuelValue, `<input class="mini mono" ${dis} data-a-fs="${s.idx}" placeholder="Start" value="${a.fuelStart ?? ""}">
+                               <input class="mini mono" ${dis} data-a-fe="${s.idx}" placeholder="Ende" value="${a.fuelEnd ?? ""}">`)}</td>
+        <td>${mkCell(fueledValue, `<input class="mini mono" ${dis} data-a-fueled="${s.idx}" placeholder="Liter" value="${a.fueled ?? ""}">`)}</td>
+        <td>${mkCell(tiresStr, `<select class="mini miniSel" ${dis} data-a-tires="${s.idx}">
+                                 <option value="">(Plan)</option>
+                                 <option value="yes" ${a.tires==="yes"?"selected":""}>Wechsel</option>
+                                 <option value="no" ${a.tires==="no"?"selected":""}>kein</option>
+                               </select>`)}</td>
+        <td>${mkCell(`${s.pitStandSec ? Math.round(s.pitStandSec)+" s" : "–"}`, `<input class="mini mono" ${dis} data-a-pit="${s.idx}" placeholder="Sek." value="${a.pit ?? ""}">`)}</td>
+        <td>${statusTag}</td>
+        <td>${mkCell(`${badgeLine}<span class="tag">${escapeHtml(s.mode==="push"?"PUSH":"SAFE")}${isRisk?" · Low Fuel":""}${isDry?" · DRY":""}</span>`,
+                     `<input class="mini miniWide" ${dis} data-a-note="${s.idx}" placeholder="Notiz" value="${a.note ?? ""}">`)}</td>
+      `,
+      done, isRisk, isDry
+    };
+  }
+
+  function renderTable(plan){
+    const pinnedBody = $("tbodyPinned");
+    const mainBody = $("tbodyMain");
+    pinnedBody.innerHTML = "";
+    mainBody.innerHTML = "";
+
+    const reserveL=parseFloat($("fuelReserve").value);
+    const drivers=driversFromTextarea($("drivers").value).map(d=>d.name);
+    const curIdx = currentStintIdx(plan);
+
+    plan.stints.forEach((s)=>{
+      const open = istOpen.has(s.idx);
+      const {html, done, isRisk, isDry} = renderRowHTML(s, drivers, reserveL);
+
+      const tr=document.createElement("tr");
+      tr.dataset.idx = String(s.idx);
+      if(open) tr.classList.add("showIST");
+      if(done) tr.classList.add("rowDone");
+      if(isDry) tr.classList.add("rowDry");
+      else if(isRisk) tr.classList.add("rowRisk");
+      if(curIdx === s.idx) tr.classList.add("rowActive");
+
+      tr.innerHTML = html;
+      if(curIdx === s.idx) pinnedBody.appendChild(tr);
+      else mainBody.appendChild(tr);
+    });
+
+    const onRowClick = (e)=>{
+      if(e.target.closest("input, select, option, textarea, button")) return;
+      const tr = e.target.closest("tr");
+      if(!tr) return;
+      const idx = +tr.dataset.idx;
+      if(istOpen.has(idx)) istOpen.delete(idx);
+      else { istOpen.clear(); istOpen.add(idx); }
+      scheduleAutosave();
+      renderTable(plan);
+    };
+    pinnedBody.onclick = onRowClick;
+    mainBody.onclick = onRowClick;
+
+    document.querySelectorAll("[data-mode-sel]").forEach(sel=>{
+      sel.addEventListener("change",(e)=>{
+        const idx=+e.target.getAttribute("data-mode-sel");
+        manualModes.set(idx, e.target.value);
+        scheduleAutosave();
+        recompute(false);
+      });
+    });
+    document.querySelectorAll("[data-driver-sel]").forEach(sel=>{
+      sel.addEventListener("change",(e)=>{
+        const idx=+e.target.getAttribute("data-driver-sel");
+        manualAssignments.set(idx, e.target.value);
+        scheduleAutosave();
+        recompute(false);
+      });
+    });
+
+    let istTimer=null;
+    const store = (idx, patch)=>{
+      const cur = actuals.get(idx) || {};
+      const next = {...cur, ...patch};
+      Object.keys(next).forEach(k=>{
+        if(next[k]===null || next[k]===undefined || String(next[k]).trim()==="") delete next[k];
+      });
+      if(Object.keys(next).length===0) actuals.delete(idx);
+      else actuals.set(idx, next);
+
+      clearTimeout(istTimer);
+      istTimer = setTimeout(()=>{
+        scheduleAutosave();
+        recompute(false);
+      }, 160);
+    };
+
+    document.querySelectorAll("[data-a-laps]").forEach(el=>el.addEventListener("input",(e)=>store(+e.target.getAttribute("data-a-laps"), {laps:e.target.value})));
+    document.querySelectorAll("[data-a-fs]").forEach(el=>el.addEventListener("input",(e)=>store(+e.target.getAttribute("data-a-fs"), {fuelStart:e.target.value})));
+    document.querySelectorAll("[data-a-fe]").forEach(el=>el.addEventListener("input",(e)=>store(+e.target.getAttribute("data-a-fe"), {fuelEnd:e.target.value})));
+    document.querySelectorAll("[data-a-fueled]").forEach(el=>el.addEventListener("input",(e)=>store(+e.target.getAttribute("data-a-fueled"), {fueled:e.target.value})));
+    document.querySelectorAll("[data-a-pit]").forEach(el=>el.addEventListener("input",(e)=>store(+e.target.getAttribute("data-a-pit"), {pit:e.target.value})));
+    document.querySelectorAll("[data-a-tires]").forEach(el=>el.addEventListener("change",(e)=>store(+e.target.getAttribute("data-a-tires"), {tires:e.target.value})));
+    document.querySelectorAll("[data-a-note]").forEach(el=>el.addEventListener("input",(e)=>store(+e.target.getAttribute("data-a-note"), {note:e.target.value})));
+  }
+
+  function updateCharts(plan){
+    const labels=[], fuelVals=[];
+    const raceStartLocal=getRaceStartLocalDate();
+
+    function labelForSec(sec){
+      const d=new Date(raceStartLocal.getTime()+sec*1000);
+      return fmtTimeHHMMSS(d);
+    }
+
+    plan.stints.forEach(s=>{
+      labels.push(labelForSec(s.startSec)); fuelVals.push(+s.fuelStart.toFixed(2));
+      labels.push(labelForSec(s.endSec));   fuelVals.push(+s.fuelEnd.toFixed(2));
+      if(s.pitStandSec && s.pitStandSec>0){
+        labels.push(labelForSec(s.endSec + s.pitStandSec));
+        fuelVals.push(+clamp(s.fuelEnd + (s.fuelAdded||0), -999, +$("tankCapacity").value).toFixed(2));
+      }
+    });
+    fuelChart.data.labels=labels;
+    fuelChart.data.datasets[0].data=fuelVals;
+    fuelChart.update();
+
+    const pitLabels=[], pitVals=[];
+    plan.stints.forEach(s=>{
+      if(s.pitStandSec && s.pitStandSec>0){
+        pitLabels.push(`Stopp ${pitLabels.length+1}`);
+        pitVals.push(Math.round(s.pitStandSec));
+      }
+    });
+    pitChart.data.labels=pitLabels;
+    pitChart.data.datasets[0].data=pitVals;
+    pitChart.update();
+  }
+
+  function renderPlan(plan){
+    $("tagStops").textContent = `Stopps: ${plan.pitStops}`;
+    $("tagStops").className = "tag " + (plan.pitStops<=10 ? "ok" : plan.pitStops<=12 ? "warn" : "bad");
+
+    $("tagTires").textContent = `Reifenwechsel: ${plan.tireChanges}`;
+    $("tagTires").className = "tag " + (plan.tireChanges<=6 ? "ok" : plan.tireChanges<=10 ? "warn" : "bad");
+
+    $("tagFuel").textContent = `PUSH ${plan.fuelPush.toFixed(2)} / SAFE ${plan.fuelSafe.toFixed(2)} L/R`;
+    $("tagFuel").className = "tag";
+
+    $("recSummary").textContent = plan.rec;
+
+    renderDriversBar();
+    renderDriverColorsUI();
+    renderGantt(plan);
+    renderTable(plan);
+    ensureCharts();
+    updateCharts(plan);
+    scheduleAutosave();
+  }
+
+  function recompute(reset){
+    if(reset){
+      manualAssignments = new Map();
+      manualModes = new Map();
+      actuals.clear();
+      istOpen.clear();
+    }
+    const plan = computePlan();
+    lastPlan = plan;
+    if(plan) renderPlan(plan);
+  }
+
+  // --------- clocks (no table rerender spam) ----------
+  let _lastCurIdx = null;
+  let _lastRacePhase = "";
+
+  function updateClocks(){
+    $("localNow").textContent = fmtTimeHHMMSS(new Date());
+    $("serverNow").textContent = fmtTimeHHMMSS(getServerNowDate());
+
+    const start=getRaceStartLocalDate().getTime();
+    const lapSec = parseLapTimeToSeconds($("lapTime").value) || 0;
+    const baseRaceSec=parseFloat($("raceHours").value)*3600;
+    const end=start + (baseRaceSec + getStartDeltaSec() + getExtraLaps()*lapSec)*1000;
+    const now=Date.now();
+
+    let phase="", st="";
+    if(now < start){
+      phase="pre";
+      const mins=Math.ceil((start-now)/60000);
+      st=`Start in ${mins} min`;
+    } else if(now<=end){
+      phase="live";
+      const rem=Math.max(0,end-now);
+      const h=Math.floor(rem/3600000);
+      const m=Math.floor((rem%3600000)/60000);
+      st=`läuft · Rest ${h}h${String(m).padStart(2,'0')}`;
+    } else {
+      phase="post";
+      st="beendet";
+    }
+    $("raceStatus").textContent=st;
+
+    if(!lastPlan) return;
+
+    renderGantt(lastPlan);
+
+    const curIdx = currentStintIdx(lastPlan);
+    if(curIdx !== _lastCurIdx || phase !== _lastRacePhase){
+      _lastCurIdx = curIdx;
+      _lastRacePhase = phase;
+      renderTable(lastPlan);
+    }
+  }
+
+  // --------- init helpers ----------
+  function setStartToNowPlus(min){
+    const d=new Date(Date.now()+min*60*1000);
+    const pad=(n)=>String(n).padStart(2,"0");
+    $("raceStartLocal").value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  // --------- Share buttons ----------
+  $("btnExportCode")?.addEventListener("click", ()=>{
+    const code = exportCode();
+    $("shareCodeBox").value = code;
+    $("shareCodeBox").focus();
+    $("shareCodeBox").select();
+    try{ navigator.clipboard.writeText(code); }catch{}
+    scheduleAutosave();
+  });
+
+  $("btnShareLink")?.addEventListener("click", ()=>{
+    const code = exportCode();
+    setHashFromCode(code);
+    const url = location.href;
+    $("shareCodeBox").value = url;
+    $("shareCodeBox").focus();
+    $("shareCodeBox").select();
+    try{ navigator.clipboard.writeText(url); }catch{}
+    scheduleAutosave();
+  });
+
+  $("btnImportCode")?.addEventListener("click", ()=>{
+    const text = ($("shareCodeBox").value || "").trim();
+    if(!text) return;
+
+    let code = text;
+    if(text.includes("#")) code = text.split("#").pop().trim();
+
+    const ok = importCode(code);
+    if(ok){
+      setHashFromCode(code);
+      $("shareCodeBox").value = location.href;
+      scheduleAutosave();
+    } else {
+      alert("Import fehlgeschlagen. Code/Link prüfen.");
+    }
+  });
+
+  // --------- wiring ----------
+  $("btnNowPlus10").addEventListener("click", ()=>{ setStartToNowPlus(10); recompute(false); scheduleAutosave(); });
+  $("btnNowPlus15").addEventListener("click", ()=>{ setStartToNowPlus(15); recompute(false); scheduleAutosave(); });
+
+  $("btnCompute").addEventListener("click", ()=>{ recompute(false); scheduleAutosave(); });
+  $("btnResetOverrides").addEventListener("click", ()=>{ recompute(true); scheduleAutosave(); });
+
+  document.querySelectorAll('input[name="fuelStrat"]').forEach(r=>r.addEventListener("change", ()=>{ recompute(false); scheduleAutosave(); }));
+  $("lastStopSmart").addEventListener("change", ()=>{ recompute(false); scheduleAutosave(); });
+
+  $("startType").addEventListener("change", ()=>{
+    updateStartUI();
+    recompute(false);
+    scheduleAutosave();
+  });
+
+  $("btnExample").addEventListener("click", ()=>{
+    $("raceHours").value=12;
+    setStartToNowPlus(10);
+    $("serverUtcOffset").value="+00:00";
+
+    $("startType").value="rolling";
+    $("startDeltaSec").value=60;
+    $("finishLapExtra").value=1;
+    $("returnLapExtra").value=2;
+
+    $("lapTime").value="02:03.0";
+    $("tankCapacity").value=97;
+    $("startFuel").value=97;
+    $("fuelPerLapPush").value=3.44;
+    $("fuelPerLapSafe").value=3.25;
+    $("defaultMode").value="push";
+
+    $("pitLossSec").value=90;
+    $("fuelRate").value=1.0;
+    $("fuelReserve").value=3.0;
+
+    $("fuelStrategySmart").checked=true;
+    $("lastStopSmart").checked=true;
+
+    $("tireChangeSec").value=25;
+    $("tireLifeMin").value=65;
+    $("tirePolicy").value="smart";
+
+    $("strategyGoal").value="balanced";
+    $("stintCapMin").value=0;
+    $("fuelPerStop").value=0;
+
+    $("drivers").value="Matthias,70\nLeo,70\nTobi,70";
+
+    $("istLock").value="on";
+    $("showFuelDelta").value="on";
+    $("maxConsec").value=2;
+    $("minRest").value=1;
+
+    updateStartUI();
+    renderDriverColorsUI();
+    recompute(true);
+    scheduleAutosave();
+  });
+
+  let tmr=null;
+  document.addEventListener("input",(e)=>{
+    const ids=[
+      "raceHours","raceStartLocal","serverUtcOffset",
+      "startType","startDeltaSec","finishLapExtra","returnLapExtra",
+      "lapTime","tankCapacity","startFuel",
+      "fuelPerLapPush","fuelPerLapSafe","defaultMode",
+      "pitLossSec","fuelRate","fuelReserve",
+      "tireChangeSec","tireLifeMin","tirePolicy",
+      "drivers","strategyGoal","stintCapMin","fuelPerStop",
+      "istLock","showFuelDelta","maxConsec","minRest","warnLevel"
+    ];
+    if(ids.includes(e.target.id)){
+      clearTimeout(tmr);
+      tmr=setTimeout(()=>{ recompute(false); scheduleAutosave(); }, 180);
+    }
+    if(e.target.id === "drivers"){
+      clearTimeout(tmr);
+      tmr=setTimeout(()=>{
+        renderDriverColorsUI();
+        recompute(false);
+        scheduleAutosave();
+      }, 220);
+    }
+  });
+
+  // --------- auto import from hash, else local autosave ----------
+  (function autoLoad(){
+    const code = getHashCode();
+    if(code){
+      const ok = importCode(code);
+      if(ok) $("shareCodeBox").value = location.href;
+      return;
+    }
+    const saved = localStorage.getItem(LS_STATE);
+    if(saved){
+      importCode(saved);
+    }
+  })();
+
+  // init
+  loadDriverColors();
+  setStartToNowPlus(10);
+  updateStartUI();
+  ensureCharts();
+  recompute(true);
+  renderDriverColorsUI();
+  setInterval(updateClocks, 500);
+  updateClocks();
+</script>
+</body>
+</html>
